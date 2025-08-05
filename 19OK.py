@@ -388,6 +388,8 @@ class MainWindow(QtWidgets.QWidget):
         self.timer.start(30)
         self.frame_cnt = 0
         self._read_failures = 0
+        self._stale_frames = 0
+        self._last_frame = None
         self.tcp_msg_sig.connect(self._process_tcp_msg)
         self.svr = start_server(on_message=self.handle_tcp_msg)
         self._running = True
@@ -720,6 +722,8 @@ class MainWindow(QtWidgets.QWidget):
         self.last_time = time.time()
         self.fps = 0.0
         self._read_failures = 0
+        self._stale_frames = 0
+        self._last_frame = None
     # ------------------- 掩膜窗口 -------------------
     def toggle_mask(self, name: str):
         if name in self.mask_windows and self.mask_windows[name].isVisible():
@@ -740,6 +744,16 @@ class MainWindow(QtWidgets.QWidget):
                 self.open_camera()
                 self._read_failures = 0
             return
+        orig_frame = frame.copy()
+        if self._last_frame is not None and np.array_equal(orig_frame, self._last_frame):
+            self._stale_frames += 1
+            if self._stale_frames > 150:
+                print("[摄像头] 画面静止，尝试重新连接")
+                self.open_camera()
+                return
+        else:
+            self._stale_frames = 0
+        self._last_frame = orig_frame
         self._read_failures = 0
         self.frame_cnt += 1
         if self.frame_cnt % self.FPS_CALC_INTERVAL == 0:
