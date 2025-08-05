@@ -387,6 +387,9 @@ class MainWindow(QtWidgets.QWidget):
         self.timer.timeout.connect(self.on_timer)
         self.timer.start(30)
         self.frame_cnt = 0
+        self._read_failures = 0
+        self._stale_frames = 0
+        self._last_frame = None
         self.tcp_msg_sig.connect(self._process_tcp_msg)
         self.svr = start_server(on_message=self.handle_tcp_msg)
         self._running = True
@@ -711,12 +714,16 @@ class MainWindow(QtWidgets.QWidget):
             return
         if self.capture:
             self.capture.release(); self.capture = None
-        self.capture = cv2.VideoCapture(idx,cv2.CAP_MSMF)
+        self.capture = cv2.VideoCapture(idx, cv2.CAP_MSMF)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        self.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
         self.frame_cnt = 0
         self.last_time = time.time()
         self.fps = 0.0
+        self._read_failures = 0
+        self._stale_frames = 0
+        self._last_frame = None
     # ------------------- 掩膜窗口 -------------------
     def toggle_mask(self, name: str):
         if name in self.mask_windows and self.mask_windows[name].isVisible():
@@ -731,7 +738,23 @@ class MainWindow(QtWidgets.QWidget):
             return
         ok, frame = self.capture.read()
         if not ok or frame is None or frame.size == 0:
+            self._read_failures += 1
+            if self._read_failures > 10:
+                print("[摄像头] 读取失败，尝试重新连接")
+                self.open_camera()
+                self._read_failures = 0
             return
+        orig_frame = frame.copy()
+        if self._last_frame is not None and np.array_equal(orig_frame, self._last_frame):
+            self._stale_frames += 1
+            if self._stale_frames > 150:
+                print("[摄像头] 画面静止，尝试重新连接")
+                self.open_camera()
+                return
+        else:
+            self._stale_frames = 0
+        self._last_frame = orig_frame
+        self._read_failures = 0
         self.frame_cnt += 1
         if self.frame_cnt % self.FPS_CALC_INTERVAL == 0:
             now = time.time()
