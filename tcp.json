@@ -1,0 +1,23 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 6000
+  },
+  "cmd_map": {
+    "蓝色-圆形": "blue_circle",
+    "蓝色-正方形": "blue_square",
+    "蓝色-三角形": "blue_triangle",
+    "黑色-圆形": "black_circle",
+    "黑色-正方形": "black_square",
+    "黑色-三角形": "black_triangle",
+    "白色-圆形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"26\",\"1\"]}",
+    "白色-正方形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"26\",\"1\"]}",
+    "白色-三角形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"26\",\"1\"]}",
+    "橙色-圆形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"28\",\"1\"]}",
+    "橙色-正方形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"28\",\"1\"]}",
+    "橙色-三角形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"28\",\"1\"]}",
+    "金色-圆形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"27\",\"1\"]}",
+    "金色-正方形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"27\",\"1\"]}",
+    "金色-三角形": "{\"dsID\":\"www.hc-system.com.RemoteMonitor\",\"reqType\":\"command\",\"packID\":\"0\",\"cmdData\":[\"modifyOutput\",\"0\",\"27\",\"1\"]}"
+  }
+}
