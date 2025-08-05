@@ -338,6 +338,7 @@ class QTextEditLogger(QtCore.QObject):
 # 主窗口
 class MainWindow(QtWidgets.QWidget):
     FPS_CALC_INTERVAL = 30
+    READ_FAIL_THRESHOLD = 30
     tcp_msg_sig = QtCore.pyqtSignal(str)
 
     def __init__(self, colors: List[ColorCfg]):
@@ -379,6 +380,7 @@ class MainWindow(QtWidgets.QWidget):
 
         # 摄像头初始化
         self.capture = None
+        self._read_failures = 0
         self.cam_combo.currentIndexChanged.connect(self.open_camera)
         self.open_camera()
 
@@ -714,6 +716,7 @@ class MainWindow(QtWidgets.QWidget):
         self.capture = cv2.VideoCapture(idx,cv2.CAP_MSMF)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        self._read_failures = 0
         self.frame_cnt = 0
         self.last_time = time.time()
         self.fps = 0.0
@@ -731,7 +734,11 @@ class MainWindow(QtWidgets.QWidget):
             return
         ok, frame = self.capture.read()
         if not ok or frame is None or frame.size == 0:
+            self._read_failures += 1
+            if self._read_failures > self.READ_FAIL_THRESHOLD:
+                self.open_camera()
             return
+        self._read_failures = 0
         self.frame_cnt += 1
         if self.frame_cnt % self.FPS_CALC_INTERVAL == 0:
             now = time.time()
