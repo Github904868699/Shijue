@@ -737,8 +737,6 @@ class MainWindow(QtWidgets.QWidget):
             ("rect",     self.chk_rect)
         ] if chk.isChecked() }
         labels = detect_shapes(frame, list(self.colors.values()), shapes_enabled)
-        if labels:
-            self._show_detected_labels(labels)
         # --- 掩膜窗口更新 ---
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         for cfg in self.colors.values():
