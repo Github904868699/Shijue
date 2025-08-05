@@ -189,7 +189,6 @@ class TcpSender:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.sock.connect((self.host, self.port))
-            print(f"[TCP] 已连接 {self.host}:{self.port}")
         except Exception as e:
             self.sock.close()
             print("[TCP] 连接失败:", e)
@@ -222,8 +221,6 @@ class TcpSender:
                             text = seg.decode("utf-8", errors="ignore")
                             if self.on_recv:
                                 self.on_recv(text)
-                            else:
-                                print("[TCP] 收到:", text)
                             buf = buf[i + 1:]
                             i = -1
                     i += 1
@@ -234,7 +231,6 @@ class TcpSender:
     def send_data(self, msg: str):
         try:
             self.sock.sendall(msg.encode("utf-8") + b"\n")
-            print("[TCP] 已发送:", msg)
         except Exception as e:
             print("[TCP] 发送失败:", e)
 
@@ -320,25 +316,10 @@ def detect_shapes(frame_bgr: np.ndarray,
             labels.append((label_txt, text_pos, qcolor))
     return labels
 
-class QTextEditLogger(QtCore.QObject):
-    append_text = QtCore.pyqtSignal(str)
-
-    def __init__(self, widget):
-        super().__init__()
-        self.widget = widget
-        self.append_text.connect(self.widget.append)
-
-    def write(self, msg):
-        if msg.strip():   # 避免空行
-            self.append_text.emit(msg.strip())
-
-    def flush(self):
-        pass
-
 # 主窗口
 class MainWindow(QtWidgets.QWidget):
     FPS_CALC_INTERVAL = 30
-    READ_FAIL_THRESHOLD = 30
+    READ_FAIL_THRESHOLD = 60
     tcp_msg_sig = QtCore.pyqtSignal(str)
 
     def __init__(self, colors: List[ColorCfg]):
@@ -359,16 +340,6 @@ class MainWindow(QtWidgets.QWidget):
         self.video_lbl = QtWidgets.QLabel(alignment=QtCore.Qt.AlignCenter)
         self.video_lbl.setMinimumSize(640, 480)
         video_panel.addWidget(self.video_lbl, 1)
-
-        # CMD输出框
-        self.cmd_output = QtWidgets.QTextEdit()
-        self.cmd_output.setReadOnly(True)
-        self.cmd_output.setFixedHeight(150)
-        video_panel.addWidget(self.cmd_output)
-        # 重定向 print 输出到日志框
-        logger = QTextEditLogger(self.cmd_output)
-        sys.stdout = logger
-        sys.stderr = logger
 
         # 把右侧整体加入主布局
         video_container = QtWidgets.QWidget()
@@ -445,7 +416,6 @@ class MainWindow(QtWidgets.QWidget):
             return
         text = json.dumps(obj, ensure_ascii=False)
         self.tcp_sender.send_data(text)
-        self.append_log(f"[发送] {text}")
 
     def send_position_data(self, cam_id: int, detections: list):
         frame = {
@@ -485,14 +455,12 @@ class MainWindow(QtWidgets.QWidget):
                 msg = self.cmd_map[text]
                 if self.tcp_sender:
                     self.tcp_sender.send_data(msg)
-                    self.append_log(f"[发送] {text} -> {msg}")
                 else:
                     print("[TCP] 未连接")
             else:
                 print(f"[未配置] {text}")
 
     def handle_hc_cmd(self, text: str):
-        self.append_log(f"[指令] {text}")
         try:
             cmd = json.loads(text)
         except Exception as e:
@@ -602,11 +570,6 @@ class MainWindow(QtWidgets.QWidget):
             lambda: self.do_capture_and_send(self.cam_combo.currentData() or 0)
         )
         vbox.addStretch(1)
-    def append_log(self, msg: str):
-        if msg.startswith("[发送]") or msg.startswith("[TCP 收到]") or msg.startswith("[测试发送]"):
-            msg = f"<b>{msg}</b>"
-        self.cmd_output.append(msg)
-
     def _add_color_group(self, parent_layout, cfg: ColorCfg):
         # ---------- 1. 可折叠 GroupBox ----------
         gbox = QtWidgets.QGroupBox(cfg.group_title)
@@ -687,7 +650,6 @@ class MainWindow(QtWidgets.QWidget):
         try:
             msg = self.cmd_input.text().format(color="测试色", shape="测试形", area=1234)
             self.tcp_sender.send_data(msg)
-            self.append_log(f"[测试发送] {msg}")
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "错误", f"发送失败: {e}")
 
@@ -697,7 +659,6 @@ class MainWindow(QtWidgets.QWidget):
     @QtCore.pyqtSlot(str)
     def _process_tcp_msg(self, text: str):
         """Callback for data received from the remote TCP server."""
-        self.append_log(f"[TCP] 收到: {text}")
         try:
             cmd = json.loads(text)
         except Exception as e:
@@ -714,6 +675,10 @@ class MainWindow(QtWidgets.QWidget):
         if self.capture:
             self.capture.release(); self.capture = None
         self.capture = cv2.VideoCapture(idx,cv2.CAP_MSMF)
+        if not self.capture.isOpened():
+            self.capture.release()
+            self.capture = None
+            return
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         self._read_failures = 0
@@ -778,7 +743,6 @@ class MainWindow(QtWidgets.QWidget):
                 if key in self.cmd_map:
                     msg = self.cmd_map[key]
                     self.tcp_sender.send_data(msg)
-                    self.append_log(f"[发送] {key} -> {msg}")
                 else:
                     print(f"[未配置] {key}")
         painter.end()
