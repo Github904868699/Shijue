@@ -341,6 +341,21 @@ class MainWindow(QtWidgets.QWidget):
         self.video_lbl.setMinimumSize(640, 480)
         video_panel.addWidget(self.video_lbl, 1)
 
+        # 识别结果显示框
+        self.msg_frame = QtWidgets.QFrame()
+        self.msg_frame.setFrameStyle(QtWidgets.QFrame.Box | QtWidgets.QFrame.Plain)
+        self.msg_frame.setFixedHeight(40)
+        msg_layout = QtWidgets.QVBoxLayout(self.msg_frame)
+        msg_layout.setContentsMargins(0, 0, 0, 0)
+        self.msg_label = QtWidgets.QLabel()
+        self.msg_label.setAlignment(QtCore.Qt.AlignCenter)
+        msg_layout.addWidget(self.msg_label)
+        video_panel.addWidget(self.msg_frame)
+
+        self.msg_timer = QtCore.QTimer(self)
+        self.msg_timer.setSingleShot(True)
+        self.msg_timer.timeout.connect(lambda: self.msg_label.setText(""))
+
         # 把右侧整体加入主布局
         video_container = QtWidgets.QWidget()
         video_container.setLayout(video_panel)
@@ -427,6 +442,11 @@ class MainWindow(QtWidgets.QWidget):
     def build_model_list_reply(self):
         return {"dsID": "www.hc-system.com.cam", "models": []}
 
+    def _show_detected_labels(self, labels: List[tuple]):
+        text = "\n".join([t for t, _p, _c in labels])
+        self.msg_label.setText(text)
+        self.msg_timer.start(2000)
+
     def do_capture_and_send(self, cam_id: int):
         if not self.capture or not self.capture.isOpened():
             print("[摄像头] 未就绪")
@@ -447,8 +467,9 @@ class MainWindow(QtWidgets.QWidget):
             if chk.isChecked()
         }
         labels = detect_shapes(frame, list(self.colors.values()), shapes_enabled)
-
-        if not labels:
+        if labels:
+            self._show_detected_labels(labels)
+        else:
             print("[识别] 未检测到目标")
         for text, _pos, _col in labels:
             if text in self.cmd_map:
@@ -716,6 +737,8 @@ class MainWindow(QtWidgets.QWidget):
             ("rect",     self.chk_rect)
         ] if chk.isChecked() }
         labels = detect_shapes(frame, list(self.colors.values()), shapes_enabled)
+        if labels:
+            self._show_detected_labels(labels)
         # --- 掩膜窗口更新 ---
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         for cfg in self.colors.values():
